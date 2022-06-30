@@ -1,0 +1,2 @@
+* Ao clicar em SIGN IN, vai redirecionar para o github e se registrar e adicionar os dados ao FaunaDB
+* Ao clicar em SUBSCRIBE NOW vai buscar os todos os dados do usuario logado no FaunaDB com base no email do usuario logado

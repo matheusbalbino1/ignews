@@ -9,11 +9,16 @@ type User = {
     ref: {
         id: string;
     }
+    data: {
+        stripe_customer_id: string
+    }
 }
 
+// ATIVADA AO CLICAR NO BOTÃO DE SUBSCRIBE NOW
 export default async (req: NextApiRequest, res: NextApiResponse) => {
     if (req.method === "POST") { // SE A REQUISIÇÃO FOR DO TIPO POST
 
+        // getSession É PARA OBTER O USUARIO QUE ESTÁ LOGADO
         const session = await getSession({ req }) // ENVIA A REQUISIÇÃO COMO PARAMETRO
         // session.user PARA OBTER O USUÁRIO
 
@@ -28,31 +33,39 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             )
         )
 
-        // CRIAR O USUARIO NO STRIPE
-        const stripeCustomer = await stripe.customers.create({
-            email: session.user.email
-        })
+        // PARA VERIFICAR SE O USUARIO JA TEM A CONTA NO STRIPE
+        let customerId = user.data.stripe_customer_id
 
-        
-        // FUNÇÃO PARA ATUALIZAR AS INFO DO USUARIO LOGADO
-        await fauna.query(
-            query.Update( // ATUALIZAR UMA INFORMAÇÃO DO USUARIO
-                query.Ref( // DA COLEÇÃO USERS
-                    query.Collection("users"), user.ref.id
-                ),
-                {
-                    // O VALOR QUE QUERO ATUALIZAR
-                    data: {
-                        stripe_customer_id: stripeCustomer.id
+        // SE NÃO TIVER CONTA NA STRIPE
+        if (!customerId) {
+
+            // CRIA O USUARIO NO STRIPE E RETORNA AS INFO(ID, EMAIL, etc) DO USUARIO PARA A VAR
+            const stripeCustomer = await stripe.customers.create({
+                email: session.user.email
+            })
+
+            // FUNÇÃO PARA SALVAR O ID DA STRIPE NO FAUNADB
+            await fauna.query(
+                query.Update( // ATUALIZAR UMA INFORMAÇÃO DO USUARIO
+                    query.Ref( // DA COLEÇÃO USERS
+                        query.Collection("users"), user.ref.id
+                    ),
+                    {
+                        // ADICIONAR O ID DO STRIPE AO FAUNADB
+                        data: {
+                            stripe_customer_id: stripeCustomer.id
+                        }
                     }
-                }
+                )
             )
-        )
 
-        
-        // PARA COMPRAR O PRODUTO APÓS CRIAR A CONTA DO USUARIO
+            customerId = stripeCustomer.id
+
+        }
+
+        // PARA COMPRAR O PRODUTO
         const checkoutSession = await stripe.checkout.sessions.create({
-            customer: stripeCustomer.id, // ID DE QUEM ESTÁ COMPRANDO 
+            customer: customerId, // ID DE QUEM ESTÁ COMPRANDO 
             payment_method_types: ["card"], // MÉTODO DE PAGAMENTO
             billing_address_collection: "required", // ENDEREÇO É OBRIGATORIO?
             line_items: [{ // CARRINHO DE COMPRAS, COMO É APENAS 1 PRODUTO PODE SER ESTÁTICO

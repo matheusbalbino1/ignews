@@ -20,13 +20,13 @@ export default NextAuth({
         // ...add more providers here
     ],
     secret: process.env.SIGNIN_KEY,
-    callbacks: { //FUNÇÕES RETORNADAS APÓS ACONTECER ALGO
+    callbacks: { 
 
-        // FUNÇÃO RETORNA TRUE APÓS O SIGNIN
+        // FUNÇÃO ATIVA APÓS O USUARIO CLICAR EM SIGN IN
         async signIn({ user, account, profile, email, credentials }) {
 
             try {
-                // CRIAR O USUARIO SE ELE AINDA NÃO EXISTIR
+                // TENTA CRIAR O USUARIO SE ELE AINDA NÃO EXISTIR
                 await fauna.query(
                     query.If( // SE
                         query.Not( // NAO COM ESSAS CONDIÇÕES
